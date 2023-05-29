@@ -44,7 +44,7 @@ public class DotsExampleManager : MonoBehaviour
 
         for (int i = 0; i < spawnedDotsCubeCount / 2; i++)
         {
-            _spawnedDotsCubes[i].closestDotsCube = _spawnedDotsCubes[result[i]];
+            _spawnedDotsCubes[i].ClosestDotsCube = _spawnedDotsCubes[result[i]];
         }
     }
 

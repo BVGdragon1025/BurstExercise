@@ -5,28 +5,29 @@ using UnityEngine;
 
 public class DotsCubeController : MonoBehaviour
 {
+    [SerializeField]
     private DotsCubeController _closestDotsCube;
 
-    public DotsCubeController closestDotsCube
+    public DotsCubeController ClosestDotsCube
     {
         get => _closestDotsCube;
         set
         {
             _closestDotsCube = value;
-            closestDotsCubeTransform = closestDotsCube.transform;
+            ClosestDotsCubeTransform = ClosestDotsCube.transform;
         }
     }
-    public Transform closestDotsCubeTransform { get; private set; }
+    public Transform ClosestDotsCubeTransform { get; private set; }
 
     private void OnDrawGizmosSelected()
     {
-        if (!closestDotsCube)
+        if (!ClosestDotsCube)
         {
             return;
         }
 
         Gizmos.color = Color.red;
-        Gizmos.DrawLine(transform.position, closestDotsCube.transform.position);
+        Gizmos.DrawLine(transform.position, ClosestDotsCubeTransform.position);
         
     }
 

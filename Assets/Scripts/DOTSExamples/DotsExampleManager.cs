@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using Unity.Burst;
 using Unity.Collections;
@@ -9,21 +8,12 @@ using UnityEngine;
 public class DotsExampleManager : MonoBehaviour
 {
     [SerializeField] private DotsCubeController _dotsExamplePrefab;
-    List<DotsCubeController> _spawnedDotsCubes = new List<DotsCubeController>();
+    [SerializeField] private int _dotsCubeAmount;
+    List<DotsCubeController> _spawnedDotsCubes = new();
     NativeArray<float3> _cubesPosition;
 
-    FindClosestJob _findClosestJob;
+    FindClosestAndFurthestJob _findClosestAndFurthestJob;
     JobHandle _handler;
-
-    [ContextMenu("Spawn")]
-    public void Spawn()
-    {
-        for(int i = 0; i < 1000; i++)
-        {
-            var cube = Instantiate(_dotsExamplePrefab, UnityEngine.Random.insideUnitSphere * 100f, Quaternion.identity ,transform);
-            _spawnedDotsCubes.Add(cube);
-        }
-    }
 
     private void Awake()
     {
@@ -40,11 +30,29 @@ public class DotsExampleManager : MonoBehaviour
         _handler.Complete();
 
         var spawnedDotsCubeCount = _spawnedDotsCubes.Count;
-        var result = _findClosestJob.result;
+        var result = _findClosestAndFurthestJob.result;
 
-        for (int i = 0; i < spawnedDotsCubeCount / 2; i++)
+        for (int i = 0; i < spawnedDotsCubeCount; i++)
         {
-            _spawnedDotsCubes[i].ClosestDotsCube = _spawnedDotsCubes[result[i]];
+            _spawnedDotsCubes[i].ClosestDotsCube = new[]
+            {
+                _spawnedDotsCubes[result[i].close1].transform.position,
+                _spawnedDotsCubes[result[i].close2].transform.position,
+                _spawnedDotsCubes[result[i].close3].transform.position,
+            };
+            _spawnedDotsCubes[i].FarthestDotsCube = _spawnedDotsCubes[result[i].far].transform.position;
+
+        }
+    }
+
+    [ContextMenu("Spawn")]
+    public void Spawn()
+    {
+        for(int i = 0; i < _dotsCubeAmount; i++)
+        {
+            var cube = Instantiate(_dotsExamplePrefab, UnityEngine.Random.insideUnitSphere * 100f, Quaternion.identity ,transform);
+            _spawnedDotsCubes.Add(cube);
+
         }
     }
 
@@ -52,60 +60,93 @@ public class DotsExampleManager : MonoBehaviour
     {
         var spawnedDotsCubesCount = _spawnedDotsCubes.Count;
         _cubesPosition = new NativeArray<float3>(spawnedDotsCubesCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
-        var result1 = new NativeArray<int>(spawnedDotsCubesCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+        var result = new NativeArray<DotsCubesNearby>(spawnedDotsCubesCount, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
 
         for(int i = 0; i < spawnedDotsCubesCount; i++)
         {
             _cubesPosition[i] = _spawnedDotsCubes[i].transform.position;
         }
 
-        _findClosestJob = new FindClosestJob
+        _findClosestAndFurthestJob = new FindClosestAndFurthestJob
         {
-            positionOffset = 0,
             length = spawnedDotsCubesCount,
             cubesPosition = _cubesPosition,
-            result = result1
+            result = result
         };
 
-        _handler = _findClosestJob.Schedule();
+        _handler = _findClosestAndFurthestJob.Schedule();
 
     }
 
     [BurstCompile]
-    public struct FindClosestJob : IJob
+    public struct FindClosestAndFurthestJob : IJob
     {
         public int length;
-        public int positionOffset;
         [ReadOnly]public NativeArray<float3> cubesPosition;
-        [WriteOnly]public NativeArray<int> result;
+        [WriteOnly]public NativeArray<DotsCubesNearby> result;
 
         public void Execute()
         {
-            var distances = new NativeArray<float>(length, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
             for(int i = 0; i < length; i++)
             {
-                distances[i] = math.INFINITY;
+                result[i] = GetClosestAndFarthestCube(i, cubesPosition[i]);
+            }
+        }
+
+        private DotsCubesNearby GetClosestAndFarthestCube(int currentIndex, float3 currentPosition)
+        {
+            var closestDistances = new NativeArray<float>(3, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+            var closestIndexes = new NativeArray<int>(3, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+
+            var furthestDistance = float.MinValue;
+            var furthestIndex = -1;
+
+            for(int i = 0; i < 3; i++)
+            {
+                closestDistances[i] = float.MaxValue;
+                closestIndexes[i] = -1;
             }
 
-            for(int i = positionOffset; i < length; i++)
+            for (int i = 0; i < length; i++)
             {
-                for(int j = 0; j < length; j++)
+                if (i == currentIndex)
                 {
-                    if(i == j)
-                    {
-                        continue;
-                    }
+                    continue;
+                }
 
-                    var newDistance = math.distance(cubesPosition[i], cubesPosition[j]);
-                    if(newDistance < distances[i])
-                    {
-                        distances[i] = newDistance;
-                        result[i] = j;
-                    }
+                var newDistance = math.distance(currentPosition, cubesPosition[i]);
 
+                for (int j = 0; j < 3; j++)
+                {
+                    if (newDistance < closestDistances[j])
+                    {
+                        for (int k = 3 - 1; k > j; k--)
+                        {
+                            closestDistances[k] = closestDistances[k - 1];
+                            closestIndexes[k] = closestIndexes[k - 1];
+
+                        }
+
+                        closestDistances[j] = newDistance;
+                        closestIndexes[j] = i;
+                        break;
+                    }
+                }
+
+                if(newDistance > furthestDistance)
+                {
+                    furthestDistance = newDistance;
+                    furthestIndex = i;
                 }
             }
 
+            return new DotsCubesNearby()
+            {
+                close1 = closestIndexes[0],
+                close2 = closestIndexes[1],
+                close3 = closestIndexes[2],
+                far = furthestIndex
+            };
         }
     }
 

@@ -5,29 +5,25 @@ using UnityEngine;
 
 public class DotsCubeController : MonoBehaviour
 {
-    [SerializeField]
-    private DotsCubeController _closestDotsCube;
-
-    public DotsCubeController ClosestDotsCube
-    {
-        get => _closestDotsCube;
-        set
-        {
-            _closestDotsCube = value;
-            ClosestDotsCubeTransform = ClosestDotsCube.transform;
-        }
-    }
-    public Transform ClosestDotsCubeTransform { get; private set; }
+    public Vector3[] ClosestDotsCube { get; set; }
+    public Vector3 FarthestDotsCube { get; set; }
 
     private void OnDrawGizmosSelected()
     {
-        if (!ClosestDotsCube)
+        if (ClosestDotsCube is not null)
         {
-            return;
+
+            Gizmos.color = Color.green;
+            for (int i = 0; i < 3; i++)
+            {
+                Gizmos.DrawLine(transform.position, ClosestDotsCube[i]);
+            }
+
         }
 
         Gizmos.color = Color.red;
-        Gizmos.DrawLine(transform.position, ClosestDotsCubeTransform.position);
+        Gizmos.DrawLine(transform.position, FarthestDotsCube);
+
         
     }
 

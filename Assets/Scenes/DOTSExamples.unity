@@ -237,6 +237,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _dotsExamplePrefab: {fileID: 7709426281386739824, guid: 8e2a28bee1700a54c950a4019dbae207, type: 3}
+  _dotsCubeAmount: 1000
 --- !u!4 &1327387526
 Transform:
   m_ObjectHideFlags: 0

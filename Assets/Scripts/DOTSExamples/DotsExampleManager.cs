@@ -120,7 +120,7 @@ public class DotsExampleManager : MonoBehaviour
                 {
                     if (newDistance < closestDistances[j])
                     {
-                        for (int k = 3 - 1; k > j; k--)
+                        for (int k = 2; k > j; k--)
                         {
                             closestDistances[k] = closestDistances[k - 1];
                             closestIndexes[k] = closestIndexes[k - 1];

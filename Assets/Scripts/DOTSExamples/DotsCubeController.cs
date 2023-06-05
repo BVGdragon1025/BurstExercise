@@ -10,7 +10,7 @@ public class DotsCubeController : MonoBehaviour
 
     private void OnDrawGizmosSelected()
     {
-        if (ClosestDotsCube is not null)
+        if (ClosestDotsCube != null)
         {
 
             Gizmos.color = Color.green;
